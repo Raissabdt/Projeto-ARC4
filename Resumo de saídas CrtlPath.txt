@@ -15,7 +15,7 @@ outMux:
 MADRK -> est 12
 MOUT -> est 9 e 12
 MS2bit1 -> est 10
-MS2bit0 -> 7 e 10 e 12
+MS2bit0 -> 7 e 10
 MS1bit1 -> 8 9
 MS1bit0 -> 5 7 8 10
 MS0 -> 5 7 8 9 10
