@@ -10,5 +10,14 @@ package GenerateKeyStream_pkg is
 		mS2, ms1: std_logic_vector(1 downto 0); -- talvez seja melhor separar em std_logic
 		rstart: std_logic; -- reset de inicio d processamento
 	end record;
+	
+	-- Adicionando constantes para nao inicializar em UUUUUUU --
+	constant CMD_ZERO : Command := (
+        wrState => '0', wrStateSize => '0', wrTextSize => '0', wrKeyStream => '0', WrDatain => '0', wrTemp => '0',
+        wrJ => '0', wrI => '0', wrK => '0',
+        mOut => '0', mAdrk => '0', mS0 => '0', mComp => '0',
+        mS2 => "00", ms1 => "00",
+        rstart => '0'
+    );
 end GenerateKeyStream_pkg;
 			

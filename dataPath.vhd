@@ -28,19 +28,23 @@ architecture arch1 of dataPath is
 
 	-- Signals dos Registradores
 	signal s_regState, s_regStateSize, s_regTextSize, s_regKeyStream, s_regI,
-	s_regJ, s_regK, s_regTemp, s_regDatain : std_logic_vector(DATA_WIDTH-1 downto 0);
+	s_regJ, s_regK, s_regTemp, s_regDatain : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 	
 	-- Signal Entrada K
-	signal k_in : std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal k_in : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 
 	-- Signals das Saídas dos Módulos
-	signal sum1, sum2, div : std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal sum1, sum2, div : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 	
 	-- Signals das Entradas dos Módulos
-	signal sum1_0, sum1_1, sum2_0, sum2_1, div_0, div_1 : std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal sum1_0, sum1_1, sum2_0, sum2_1, div_0, div_1 : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 
 	-- Outros Signals
-	signal div0, restDiv : std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal div0, restDiv : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
+	
+	-- Sinais auxiliares para a lógica do Status
+    signal fio_quociente_1 : std_logic;
+    signal fio_resto_nao_0 : std_logic;
 
 begin
 
@@ -176,20 +180,40 @@ begin
 	sum2 <= std_logic_vector(UNSIGNED(sum2_0) + UNSIGNED(sum2_1));
 
 	div_0 <= sum2 when cmd.mcomp = '0' else s_regK;
-	div_1 <= s_regStateSize when cmd.mcomp = '1' else sum1;
+	div_1 <= sum1 when cmd.mcomp = '1' else s_regStateSize;
 
 
 	-- Verificar outras formas de fazer isso aqui, provavelmente não vai funcionar
 
-	div <= std_logic_vector(UNSIGNED(div_0) / UNSIGNED(div_1));
-	restDiv <= std_logic_vector(UNSIGNED(div_0) rem UNSIGNED(div_1));
+	-- Proteção contra Divisão por Zero no tempo 0 ns
+    process(div_0, div_1)
+    begin
+        if div_1 = std_logic_vector(to_unsigned(0, DATA_WIDTH)) then
+            div     <= std_logic_vector(UNSIGNED(div_0) / 1);
+            restDiv <= std_logic_vector(UNSIGNED(div_0) rem 1);
+        else
+            div     <= std_logic_vector(UNSIGNED(div_0) / UNSIGNED(div_1));
+            restDiv <= std_logic_vector(UNSIGNED(div_0) rem UNSIGNED(div_1));
+        end if;
+    end process;
 
 	-- Outputs
 	address <= sum1 when cmd.mAdrk = '0' else s_regK;
 
 	data_out <= s_regDatain when cmd.mOut = '0' else s_regTemp;
 
-	-- Está faltando o status, não lembro o que ele faz
+	-- Status
+	
+    -- Verifica se o Quociente (div) tem apenas o bit 0 em nível alto
+    fio_quociente_1 <= div(0) and (not div(1)) and (not div(2)) and (not div(3)) 
+                       and (not div(4)) and (not div(5)) and (not div(6)) and (not div(7));
+
+    -- Verifica se o Resto (restDiv) tem qualquer bit em nível alto
+    fio_resto_nao_0 <= restDiv(0) or restDiv(1) or restDiv(2) or restDiv(3) 
+                       or restDiv(4) or restDiv(5) or restDiv(6) or restDiv(7);
+
+    -- Verifica se algum dos dois acima foi ativado
+    status <= not fio_quociente_1;
 
 end arch1;
 

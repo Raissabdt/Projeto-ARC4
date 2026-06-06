@@ -27,8 +27,8 @@ entity GenerateKeyStream is
 end GenerateKeyStream;
 
 architecture structural of GenerateKeyStream is
-	signal cmd: Command;
-	signal sts: std_logic;
+	signal cmd: Command := CMD_ZERO;
+	signal sts: std_logic := '0';
 begin
 
 	CONTROL_PATH: entity work.controlPath
@@ -56,7 +56,7 @@ begin
 		);
 end structural;
 
-architecture behavioral of GenerateKeyStream is
+--architecture behavioral of GenerateKeyStream is
 	-- Parte 2 do Trabalho
-begin
-end behavioral;
+--begin
+--end behavioral;
