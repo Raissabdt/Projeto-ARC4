@@ -14,7 +14,7 @@ entity controlPath is
 end controlPath;
         
 architecture behav of controlPath is
-    type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12);
+    type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11);
     signal currentState, nextState : State := S0;
 begin
     process(clk, rst)
@@ -90,61 +90,55 @@ begin
                 cmd.mS2 <= "00";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
+				cmd.wrDataIn <= '1';
                 nextState <= S6;
                 
-            when S6 => 
-                -- Salva S[i] no Datain
-                cmd.wrDataIn <= '1';
-                -- Mantém endereço S[i] estável
-                cmd.mS0 <= '1';
-                cmd.ms1 <= "10"; 
-                nextState <= S7;
                 
-            when S7 => 
+            when S6 => 
                 -- Calcula j = (j + S[i]) mod N e aponta memória para S[j]
                 cmd.wrJ <= '1';
                 cmd.mS2 <= "01";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
-                nextState <= S8;
+                nextState <= S7;
                 
-            when S8 => 
+            when S7 => 
                 -- Salva S[j] no Temp
                 cmd.wrTemp <= '1';
                 -- Mantém endereço S[j] estável
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "11";
-                nextState <= S9;
+                nextState <= S8;
                 
             -- === O SWAP (TROCA) ===
 
-            when S9 => 
+            when S8 => 
                 -- Escreve Datain (antigo S[i]) no endereço S[j]
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "11";
                 cmd.mOut <= '0';
                 wr <= '1'; -- HABILITA ESCRITA DA MEMÓRIA
-                nextState <= S10;
+                nextState <= S9;
                 
-            when S10 => 
+            when S9 => 
                 -- Escreve Temp (antigo S[j]) no endereço S[i]
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "10";
                 cmd.mOut <= '1';
                 wr <= '1'; -- HABILITA ESCRITA DA MEMÓRIA
-                nextState <= S11;
+                nextState <= S10;
                 
             -- === A GERAÇÃO DO BYTE ===
 
-            when S11 => 
+            when S10 => 
                 -- Calcula t = (S[i] + S[j]) mod N e lê S[t]
                 cmd.mS2 <= "11";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
                 cmd.wrTemp <= '1'; -- Salva o byte gerado no Temp
-                nextState <= S12;
+                nextState <= S11;
                 
-            when S12 => 
+            when S11 => 
                 -- Escreve Temp no endereço RegK
                 cmd.mAdrk <= '1';
                 cmd.mOut <= '1';
