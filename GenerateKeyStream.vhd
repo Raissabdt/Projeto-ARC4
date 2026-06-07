@@ -119,21 +119,32 @@ begin
 			done <= '1';
 		  end if;
 			
-		when S5 =>		  
+		when S5 => -- S5 e S6 do diagrama mesclados  
 		  currentState <= S6;
-		  I_r <= (I_r + 1) mod stateSize_r;
+		  I_r <= (I_r + 1) rem stateSize_r;
 		  dataIn_r <= UNSIGNED(data_in); 	
 
-		when S6 =>
+		when S6 => 
 		  currentState <= S7; -- RegJ = (RegJ + RegData_in) % RegStateSize
-		  J_r <= (J_r + dataIn_r) mod stateSize;
+		  J_r <= (J_r + dataIn_r) rem stateSize_r;
 		  
 		when S7 =>
+		  currentState <= S8;
+		  temp_r <= UNSIGNED(data_in);		  
+		  wr <= '1'; -- n tenho certeza desse sinal
 		when S8 =>
-		when S9 =>
+		  currentState <= S9;
+		  wr <= '1';
+		  
+		when S9 => --talvez tenha algo errado aq, estado n faz poha nenhuma
+		  currentState <= S10;		  	  
+
 		when S10 =>
+		  currentState <= S11;
+		  temp_r <= UNSIGNED(data_in);		  
+		  
 		when S11 =>
-		when S12 =>
+		  currentState <= S4;			  	
 
 		when others => currentState <= S0;
 
@@ -141,7 +152,15 @@ begin
 	end if;
 	end process;
 
-	address <= std_logic_vector(((I_r + 1) mod stateSize_r) + state_r) when currentState = S5 else
-		std_logic_vector((J_r + dataIn_r) mod stateSize + state_r) when currentState = S6;
+	address <= std_logic_vector(((I_r + 1) rem stateSize_r) + state_r) when currentState = S5 else
+		std_logic_vector((UNSIGNED(J_r) + UNSIGNED(dataIn_r)) rem stateSize_r + state_r) when currentState = S6 else
+		std_logic_vector(J_r + state_r) when currentState = S7 else 
+		std_logic_vector(I_r + state_r) when currentState = S8 else 
+		std_logic_vector(((dataIn_r + temp_r) rem stateSize_r) + state_r) when currentState = S9 or currentState = S10 else
+		std_logic_vector(K) when currentState = S11 else (others => 'Z');
+	
+	data_out <= std_logic_vector(dataIn_r) when currentState = S7 else 
+		std_logic_vector(temp_r) when currentState = S8 or currentState = S11 else
+		(others => 'Z');
 
 end behav;
