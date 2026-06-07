@@ -40,7 +40,7 @@ architecture arch1 of dataPath is
 	signal sum1_0, sum1_1, sum2_0, sum2_1, div_0, div_1 : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 
 	-- Outros Signals
-	signal div0, restDiv : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
+	signal restDiv : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 	
 	-- Sinais auxiliares para a lógica do Status
     signal fio_quociente_1 : std_logic;
@@ -98,7 +98,7 @@ begin
             q       => s_regKeyStream          
         );
         
-        RegI: entity work.RegisterNbits
+    RegI: entity work.RegisterNbits
         generic map (
             WIDTH   => DATA_WIDTH
         )
@@ -205,15 +205,15 @@ begin
 	-- Status
 	
     -- Verifica se o Quociente (div) tem apenas o bit 0 em nível alto
-    fio_quociente_1 <= div(0) and (not div(1)) and (not div(2)) and (not div(3)) 
-                       and (not div(4)) and (not div(5)) and (not div(6)) and (not div(7));
+    fio_quociente_1 <= not(div(0) and (not div(1)) and (not div(2)) and (not div(3)) 
+                       and (not div(4)) and (not div(5)) and (not div(6)) and (not div(7)));
 
     -- Verifica se o Resto (restDiv) tem qualquer bit em nível alto
     fio_resto_nao_0 <= restDiv(0) or restDiv(1) or restDiv(2) or restDiv(3) 
                        or restDiv(4) or restDiv(5) or restDiv(6) or restDiv(7);
 
     -- Verifica se algum dos dois acima foi ativado
-    status <= not fio_quociente_1;
+    status <= fio_quociente_1 or fio_resto_nao_0;
 
 end arch1;
 
