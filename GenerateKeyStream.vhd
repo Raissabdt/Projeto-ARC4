@@ -58,17 +58,21 @@ end structural;
 
 architecture behav of GenerateKeyStream is --ESBOÇO, nao testado
 	
-	type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12);
+	type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11);
 	signal currentState: State;
 
 	-- sinais para registradores 
-	signal stateSize_r, textSize_r, dataIn_r, I_r, J_r, temp_r: std_logic_vector(DATA_WIDTH-1 downto 0); 
+	signal stateSize_r, textSize_r, dataIn_r, I_r, J_r, temp_r: UNSIGNED(DATA_WIDTH-1 downto 0); 
 	
 	signal state_r, keyStream_r, K, arrayEnd: UNSIGNED(ADDR_WIDTH-1 downto 0); --K sao endereços
 	--signal count
 begin
 	process(clk, rst)
 	begin 
+
+	ce <= '1'; 
+        wr <= '0'; 
+        done <= '0';
 	  
 	if rst = '1' then 
        	  currentState <= S0;
@@ -77,28 +81,28 @@ begin
 
 	   case currentState is 
 	 	when S0 =>
-	
+		  ce <= '0';
 		  if data_av = '1' then			
 			state_r <= UNSIGNED(data);
 			currentState <= S1;
 		  end if; 			
 	
 		when S1 =>
-		  
+		  ce <= '0';
 		  if data_av = '1' then			
-			stateSize_r <= data;
+			stateSize_r <= UNSIGNED(data);
 			currentState <= S2; 
 		  end if; 
 		 
 		when S2 =>
-		  
+		  ce <= '0';
 		  if data_av = '1' then			
-			textSize_r <= data;
+			textSize_r <= UNSIGNED(data);
 			currentState <= S3;
 		  end if;  
 
 		when S3 =>
-		  
+		  ce <= '0';
 		  if data_av = '1' then			
 			keyStream_r <= UNSIGNED(data);
 			K <= UNSIGNED(data);
@@ -107,7 +111,7 @@ begin
 		  end if;
 	  
 		when S4 =>
-			
+		  ce <= '0';
 		  if K < arrayEnd then
 			currentState <= S5; 			
 		  else			
@@ -115,11 +119,15 @@ begin
 			done <= '1';
 		  end if;
 			
+		when S5 =>		  
+		  currentState <= S6;
+		  I_r <= (I_r + 1) mod stateSize_r;
+		  dataIn_r <= UNSIGNED(data_in); 	
 
-
-		when S5 =>
-			currentState <= S6;
 		when S6 =>
+		  currentState <= S7; -- RegJ = (RegJ + RegData_in) % RegStateSize
+		  J_r <= (J_r + dataIn_r) mod stateSize;
+		  
 		when S7 =>
 		when S8 =>
 		when S9 =>
@@ -132,5 +140,8 @@ begin
 	end case;
 	end if;
 	end process;
+
+	address <= std_logic_vector(((I_r + 1) mod stateSize_r) + state_r) when currentState = S5 else
+		std_logic_vector((J_r + dataIn_r) mod stateSize + state_r) when currentState = S6;
 
 end behav;
