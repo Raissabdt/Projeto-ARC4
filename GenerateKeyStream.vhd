@@ -62,9 +62,10 @@ architecture behav of GenerateKeyStream is --ESBOÇO, nao testado
 	signal currentState: State;
 
 	-- sinais para registradores 
-	signal state, stateSize, textSize, keyStream, dataIn, I, J, K, temp: std_logic_vector(DATAWIDTH-1 downto 0); 
-	signal count, arrayEnd: std_logic_vector(DATA_WIDTH-1 downto 0);
-
+	signal stateSize_r, textSize_r, dataIn_r, I_r, J_r, temp_r: std_logic_vector(DATA_WIDTH-1 downto 0); 
+	
+	signal state_r, keyStream_r, K, arrayEnd: UNSIGNED(ADDR_WIDTH-1 downto 0); --K sao endereços
+	--signal count
 begin
 	process(clk, rst)
 	begin 
@@ -77,47 +78,47 @@ begin
 	   case currentState is 
 	 	when S0 =>
 	
-		  if data_av = '1' then	
-		
-			state <= data;
+		  if data_av = '1' then			
+			state_r <= UNSIGNED(data);
 			currentState <= S1;
 		  end if; 			
 	
 		when S1 =>
 		  
-		  if data_av = '1' then	
-		
-			stateSize <= data;
+		  if data_av = '1' then			
+			stateSize_r <= data;
 			currentState <= S2; 
 		  end if; 
 		 
 		when S2 =>
 		  
-		  if data_av = '1' then	
-		
-			textSize <= data;
+		  if data_av = '1' then			
+			textSize_r <= data;
 			currentState <= S3;
 		  end if;  
 
 		when S3 =>
 		  
-		  if data_av = '1' then	
-		
-			keyStream <= data;
-			K <= data;
+		  if data_av = '1' then			
+			keyStream_r <= UNSIGNED(data);
+			K <= UNSIGNED(data);
 			currentState <= S4;
-			arrayEnd <= keyStream + textSize;
-			
+			arrayEnd <= UNSIGNED(data) + UNSIGNED(textSize_r);			
 		  end if;
 	  
 		when S4 =>
 			
 		  if K < arrayEnd then
-			currentState <= S5;
+			currentState <= S5; 			
+		  else			
+			currentState <= S0;
+			done <= '1';
+		  end if;
 			
 
 
 		when S5 =>
+			currentState <= S6;
 		when S6 =>
 		when S7 =>
 		when S8 =>
@@ -126,6 +127,10 @@ begin
 		when S11 =>
 		when S12 =>
 
+		when others => currentState <= S0;
 
+	end case;
+	end if;
+	end process;
 
 end behav;
