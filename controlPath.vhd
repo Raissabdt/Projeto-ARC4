@@ -28,15 +28,14 @@ begin
 
     process(currentState, status, data_av)
     begin
-        -- Estado base seguro: Nada é gravado, memória apenas lê
-        cmd <= CMD_ZERO;
+        cmd <= CMD_ZERO; -- zera tudo pra nao iniciar em UUUU
         ce <= '1'; 
         wr <= '0'; 
         done <= '0';
 
         case currentState is
             when S0 =>
-                ce <= '0'; -- Memória desligada na configuração
+                ce <= '0'; -- desliga memoria na configuracao
                 if data_av = '1' then
                     cmd.wrState <= '1'; 
                     nextState <= S1; 
@@ -78,24 +77,22 @@ begin
                 if status = '1' then
                     nextState <= S5; 
                 else
-                    done <= '1'; -- Acende o Done se acabou
+                    done <= '1'; -- finaliza operacao
                     nextState <= S0;
                 end if;
                 
-            -- === INÍCIO DO LOOP PRGA ===
+            -- laço de loop
 
             when S5 => 
-                -- Calcula i = (i + 1) mod N e aponta memória para S[i]
+                -- atualiza RegI e guarda RAM[I] no DataIn
                 cmd.wrI <= '1';
-                cmd.mS2 <= "00";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
-				cmd.wrDataIn <= '1';
+                cmd.wrDataIn <= '1';
                 nextState <= S6;
                 
-                
             when S6 => 
-                -- Calcula j = (j + S[i]) mod N e aponta memória para S[j]
+                -- atualiza RegJ
                 cmd.wrJ <= '1';
                 cmd.mS2 <= "01";
                 cmd.mS0 <= '1';
@@ -103,51 +100,46 @@ begin
                 nextState <= S7;
                 
             when S7 => 
-                -- Salva S[j] no Temp
+                -- le RAM[J] e guarda no Temp
                 cmd.wrTemp <= '1';
-                -- Mantém endereço S[j] estável
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "11";
-                nextState <= S8;
+                nextState <= S8; 
                 
-            -- === O SWAP (TROCA) ===
+            -- SWAP
 
             when S8 => 
-                -- Escreve Datain (antigo S[i]) no endereço S[j]
+                -- Grava DataIn (antigo RAM[I]) no endereco J (estado novo que nao existe no diagrama, pois a RAM tem uma porta só)
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "11";
-                cmd.mOut <= '0';
-                wr <= '1'; -- HABILITA ESCRITA DA MEMÓRIA
+                cmd.mOut <= '0'; 
+                wr <= '1';
                 nextState <= S9;
                 
             when S9 => 
-                -- Escreve Temp (antigo S[j]) no endereço S[i]
+                -- Grava Temp (antigo RAM[J]) no endereco I
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "10";
                 cmd.mOut <= '1';
-                wr <= '1'; -- HABILITA ESCRITA DA MEMÓRIA
+                wr <= '1';
                 nextState <= S10;
-                
-            -- === A GERAÇÃO DO BYTE ===
 
             when S10 => 
-                -- Calcula t = (S[i] + S[j]) mod N e lê S[t]
+                -- Calcula t e guarda RAM[t] no Temp
                 cmd.mS2 <= "11";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
-                cmd.wrTemp <= '1'; -- Salva o byte gerado no Temp
+                cmd.wrTemp <= '1'; 
                 nextState <= S11;
                 
             when S11 => 
-                -- Escreve Temp no endereço RegK
+                -- Grava a informacao gerada no endereco K e incrementa K
                 cmd.mAdrk <= '1';
                 cmd.mOut <= '1';
-                wr <= '1'; -- HABILITA ESCRITA DA MEMÓRIA
-                
-                -- Incrementa o K
-                cmd.wrK <= '1';
+                wr <= '1';
+                cmd.wrK <= '1'; 
                 cmd.mS2 <= "10";
-                nextState <= S4;      
+                nextState <= S4;   
         end case;
     end process;
 end behav;
