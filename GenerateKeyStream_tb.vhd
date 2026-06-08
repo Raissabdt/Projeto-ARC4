@@ -14,53 +14,104 @@ architecture sim of GenerateKeyStream_tb is
     signal rst      : std_logic := '1';
     signal data_av  : std_logic := '0';
     signal data     : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
-    signal done     : std_logic;
 
-    -- Sinais de Interface com a Memória
-    signal mem_wr       : std_logic;
-    signal mem_ce       : std_logic;
-    signal mem_address  : std_logic_vector(ADDR_WIDTH-1 downto 0);
-    signal proc_to_mem  : std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal mem_to_proc  : std_logic_vector(DATA_WIDTH-1 downto 0);
+    -- Structural
+   signal done_str     : std_logic;
+   signal mem_wr_str   : std_logic;
+   signal mem_ce_str   : std_logic;
+   signal mem_addr_str : std_logic_vector(ADDR_WIDTH-1 downto 0);
+   signal proc_mem_str : std_logic_vector(DATA_WIDTH-1 downto 0);
+   signal mem_proc_str : std_logic_vector(DATA_WIDTH-1 downto 0);
+
+    -- Behavioral
+   signal done_beh     : std_logic;
+   signal mem_wr_beh   : std_logic;
+   signal mem_ce_beh   : std_logic;
+   signal mem_addr_beh : std_logic_vector(ADDR_WIDTH-1 downto 0);
+   signal proc_mem_beh : std_logic_vector(DATA_WIDTH-1 downto 0);
+   signal mem_proc_beh : std_logic_vector(DATA_WIDTH-1 downto 0);
 begin
 
-    -- 1. Instância do Processador (Forçando o uso da arquitetura Structural)
-    PROCESSOR: entity work.GenerateKeyStream(structural)
-        generic map (
-            ADDR_WIDTH => ADDR_WIDTH,
-            DATA_WIDTH => DATA_WIDTH
-        )
-        port map (
-            clk      => clk,
-            rst      => rst,
-            data_av  => data_av,
-            data     => data,
-            done     => done,
-            wr       => mem_wr,
-            ce       => mem_ce,
-            address  => mem_address,
-            data_out => proc_to_mem,
-            data_in  => mem_to_proc
-        );
+    -- 1. Inst�ncias do Processador
+    PROCESSOR_STRUCTURAL: entity work.GenerateKeyStream(structural)
+    generic map (
+        ADDR_WIDTH => ADDR_WIDTH,
+        DATA_WIDTH => DATA_WIDTH
+    )
+    port map (
+        clk      => clk,
+        rst      => rst,
+        data_av  => data_av,
+        data     => data,
+        done     => done_str,
+        wr       => mem_wr_str,
+        ce       => mem_ce_str,
+        address  => mem_addr_str,
+        data_out => proc_mem_str,
+        data_in  => mem_proc_str
+    );
 
-    -- 2. Instância da Memória RAM
-    RAM: entity work.Memory
-        generic map (
-            DATA_WIDTH    => DATA_WIDTH,
-            ADDR_WIDTH    => ADDR_WIDTH,
-            imageFileName => "ram_init.txt"
-        )
-        port map (
-            clk      => clk,
-            ce       => mem_ce,
-            wr       => mem_wr,
-            address  => mem_address,
-            data_in  => proc_to_mem,
-            data_out => mem_to_proc
-        );
+    PROCESSOR_BEHAV: entity work.GenerateKeyStream(behav)
+    generic map (
+        ADDR_WIDTH => ADDR_WIDTH,
+        DATA_WIDTH => DATA_WIDTH
+    )
+    port map (
+        clk      => clk,
+        rst      => rst,
+        data_av  => data_av,
+        data     => data,
+        done     => done_beh,
+        wr       => mem_wr_beh,
+        ce       => mem_ce_beh,
+        address  => mem_addr_beh,
+        data_out => proc_mem_beh,
+        data_in  => mem_proc_beh
+    );
 
+    -- 2. Inst�ncias da Mem�ria
+    RAM_STRUCTURAL: entity work.Memory
+    generic map (
+        DATA_WIDTH    => DATA_WIDTH,
+        ADDR_WIDTH    => ADDR_WIDTH,
+        imageFileName => "ram_init.txt"
+    )
+    port map (
+        clk      => clk,
+        ce       => mem_ce_str,
+        wr       => mem_wr_str,
+        address  => mem_addr_str,
+        data_in  => proc_mem_str,
+        data_out => mem_proc_str
+    );
+
+    RAM_BEHAV: entity work.Memory
+    generic map (
+        DATA_WIDTH    => DATA_WIDTH,
+        ADDR_WIDTH    => ADDR_WIDTH,
+        imageFileName => "ram_init.txt"
+    )
+    port map (
+        clk      => clk,
+        ce       => mem_ce_beh,
+        wr       => mem_wr_beh,
+        address  => mem_addr_beh,
+        data_in  => proc_mem_beh,
+        data_out => mem_proc_beh
+    );
     -- 3. Gerador de Clock de 25ns
     clk <= not clk after 25 ns;
+
+    process(clk)
+    begin
+        if rising_edge(clk) then
+
+            assert done_str = done_beh
+            report "Divergencia no DONE"
+            severity error;
+
+        end if;
+    end process;
 
     -- 4. O Teste de Injeção de Dados (Cenário do Logisim)
     process
@@ -93,10 +144,14 @@ begin
         data <= x"00";
         
         -- Espera terminar
-        wait until done = '1';
-        wait for 100 ns;
-        assert false report "=== CRIPTOGRAFIA FINALIZADA COM SUCESSO! ===" severity note;
-        wait;
+       wait until done_str = '1' and done_beh = '1';
+
+       wait for 100 ns;
+
+       assert false
+       report "=== CRIPTOGRAFIA FINALIZADA COM SUCESSO! ==="
+       severity note;
+       wait;
     end process;
 
 end sim;
