@@ -56,9 +56,9 @@ begin
 		);
 end structural;
 
-architecture behav of GenerateKeyStream is --ESBOÇO, nao testado
+architecture behav of GenerateKeyStream is 
 	
-	type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11);
+	type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10);
 	signal currentState: State;
 
 	-- sinais para registradores 
@@ -76,6 +76,19 @@ begin
 	  
 	if rst = '1' then 
        	  currentState <= S0;
+
+	  I_r <= (others => '0');
+	  J_r <= (others => '0');
+	  temp_r <= (others => '0');
+	  dataIn_r <= (others => '0');
+
+	  state_r <= (others => '0');
+	  stateSize_r <= (others => '0');
+	  textSize_r <= (others => '0');
+	  keyStream_r <= (others => '0');
+
+	  K <= (others => '0');
+	  arrayEnd <= (others => '0');
 
 	elsif rising_edge(clk) then
 
@@ -106,8 +119,8 @@ begin
 		  if data_av = '1' then			
 			keyStream_r <= UNSIGNED(data);
 			K <= UNSIGNED(data);
-			currentState <= S4;
 			arrayEnd <= UNSIGNED(data) + UNSIGNED(textSize_r);			
+			currentState <= S4;		
 		  end if;
 	  
 		when S4 =>
@@ -119,32 +132,32 @@ begin
 			done <= '1';
 		  end if;
 			
-		when S5 => -- S5 e S6 do diagrama mesclados  
+		when S5 => -- S5 e S6 do diagrama original mesclados  
 		  currentState <= S6;
 		  I_r <= (I_r + 1) rem stateSize_r;
 		  dataIn_r <= UNSIGNED(data_in); 	
 
 		when S6 => 
-		  currentState <= S7; -- RegJ = (RegJ + RegData_in) % RegStateSize
+		  currentState <= S7; 
 		  J_r <= (J_r + dataIn_r) rem stateSize_r;
 		  
 		when S7 =>
 		  currentState <= S8;
 		  temp_r <= UNSIGNED(data_in);		  
-		  wr <= '1'; -- n tenho certeza desse sinal
+		  wr <= '1';
+
 		when S8 =>
 		  currentState <= S9;
 		  wr <= '1';
 		  
-		when S9 => --talvez tenha algo errado aq, estado n faz poha nenhuma
-		  currentState <= S10;		  	  
+		when S9 =>
+		  currentState <= S10;
+		  temp_r <= UNSIGNED(data_in);		  	  
 
 		when S10 =>
-		  currentState <= S11;
-		  temp_r <= UNSIGNED(data_in);		  
-		  
-		when S11 =>
-		  currentState <= S4;			  	
+		  currentState <= S4;
+		  wr <= '1';
+		  K  <= K + 1;  		  	  	
 
 		when others => currentState <= S0;
 
@@ -156,11 +169,11 @@ begin
 		std_logic_vector((UNSIGNED(J_r) + UNSIGNED(dataIn_r)) rem stateSize_r + state_r) when currentState = S6 else
 		std_logic_vector(J_r + state_r) when currentState = S7 else 
 		std_logic_vector(I_r + state_r) when currentState = S8 else 
-		std_logic_vector(((dataIn_r + temp_r) rem stateSize_r) + state_r) when currentState = S9 or currentState = S10 else
-		std_logic_vector(K) when currentState = S11 else (others => 'Z');
+		std_logic_vector(((dataIn_r + temp_r) rem stateSize_r) + state_r) when currentState = S9 else
+		std_logic_vector(K) when currentState = S10 else (others => 'Z');
 	
 	data_out <= std_logic_vector(dataIn_r) when currentState = S7 else 
-		std_logic_vector(temp_r) when currentState = S8 or currentState = S11 else
+		std_logic_vector(temp_r) when currentState = S8 or currentState = S10 else
 		(others => 'Z');
 
 end behav;
