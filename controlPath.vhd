@@ -14,7 +14,7 @@ entity controlPath is
 end controlPath;
         
 architecture behav of controlPath is
-    type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11);
+    type State is (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10);
     signal currentState, nextState : State := S0;
 begin
     process(clk, rst)
@@ -66,6 +66,7 @@ begin
                 ce <= '0';
                 if data_av = '1' then
                     cmd.wrKeyStream <= '1'; 
+					cmd.wrK <= '1';
                     nextState <= S4; 
                 else
                     nextState <= S3;
@@ -100,39 +101,32 @@ begin
                 nextState <= S7;
                 
             when S7 => 
-                -- le RAM[J] e guarda no Temp
-                cmd.wrTemp <= '1';
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "11";
+                -- LEITURA: Pega o valor antigo de RAM[J] e salva no Temp
+                cmd.wrTemp <= '1';
+                -- ESCRITA: Pega o DataIn e grava no RAM[J] no mesmo clock!
+                cmd.mOut <= '0'; 
+                wr <= '1'; 
                 nextState <= S8; 
                 
-            -- SWAP
-
             when S8 => 
-                -- Grava DataIn (antigo RAM[I]) no endereco J (estado novo que nao existe no diagrama, pois a RAM tem uma porta só)
+                -- Finaliza o Swap: Grava Temp no endereço I
                 cmd.mS0 <= '1';
-                cmd.ms1 <= "11";
-                cmd.mOut <= '0'; 
+                cmd.ms1 <= "10";   -- Endereço I
+                cmd.mOut <= '1';   -- Seleciona Temp
                 wr <= '1';
                 nextState <= S9;
                 
             when S9 => 
-                -- Grava Temp (antigo RAM[J]) no endereco I
-                cmd.mS0 <= '1';
-                cmd.ms1 <= "10";
-                cmd.mOut <= '1';
-                wr <= '1';
-                nextState <= S10;
-
-            when S10 => 
                 -- Calcula t e guarda RAM[t] no Temp
                 cmd.mS2 <= "11";
                 cmd.mS0 <= '1';
                 cmd.ms1 <= "01";
                 cmd.wrTemp <= '1'; 
-                nextState <= S11;
+                nextState <= S10; -- 
                 
-            when S11 => 
+            when S10 => 
                 -- Grava a informacao gerada no endereco K e incrementa K
                 cmd.mAdrk <= '1';
                 cmd.mOut <= '1';
